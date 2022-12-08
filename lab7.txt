@@ -1,0 +1,155 @@
+--1a
+create or replace function increment (x integer)
+returns
+  integer AS $$
+  begin
+    return x + 1;
+  end;
+$$
+language 'plpgsql';
+--1b
+create or replace function sum (a integer, b integer)
+returns
+  integer AS $$
+  begin
+    return a + b;
+  end;
+$$
+language 'plpgsql';
+--1c
+create or replace function div (a integer)
+returns
+  boolean AS $$
+  begin
+    if a%2==0 then return true;
+        else return false;
+        end if;
+  end;
+$$
+language 'plpgsql';
+--1d
+create or replace function valid (a text)
+returns
+  boolean AS $$
+  begin
+    if length(a)>=8 then return true;
+        else return false;
+        end if;
+  end;
+$$
+language 'plpgsql';
+--1e
+create or replace function sum (a integer,out b integer, out c integer)
+ AS $$
+  begin
+    b=a;
+    c=a+1;
+  end;
+$$
+language 'plpgsql';
+
+--2
+create table tabletwo(
+    id int unique,
+    date_1 date,
+    age int,
+    price int,
+    curr_date timestamp,
+    primary key (id)
+);
+--2a
+create or replace function trigger_1() returns trigger as $time_trigger$
+    begin
+        new.curr_date := current_timestamp;
+        return new;
+    end;
+    $time_trigger$
+language plpgsql;
+
+create trigger time_trigger before insert or update on tabletwo
+    for each row execute function trigger_1();
+insert into tabletwo(id, date_1, age, price) values(1, '2002-10-11', 20, 4500); /*proverka*/
+
+--2b
+create or replace function agecalc() returns trigger as
+    $$
+        begin
+            new.age = extract(years from age(current_date, new.date_1 ));
+        return new;
+    end;
+    $$
+language plpgsql;
+
+create trigger calc_age before insert on
+    tabletwo for each row execute procedure agecalc();
+
+insert into tabletwo (id, date_1,price)values (2, '2002-05-09',3000);/*proverka*/
+
+--2c
+create or replace function tax() returns trigger as
+    $$
+        begin
+            new.price = new.price+new.price*0.12;
+        return new;
+    end;
+    $$
+language plpgsql;
+
+create trigger pricentax before insert on
+    tabletwo for each row execute procedure tax();
+
+insert into tabletwo (id, date_1,price)values (4, '2002-05-09',3000);/*proverka*/
+
+--2d
+create or replace function no_del() returns trigger
+    as $$
+    begin
+        insert into tabletwo(id,date_1,price) values(old.id,old.date_1,old.price);
+        return old;
+    end;
+    $$
+language 'plpgsql';
+
+create trigger del_del
+    after delete
+    on tabletwo
+    for each row
+    execute procedure no_del();
+
+--3a
+create table table_3(
+    id int,
+    name varchar,
+    date_of_birth date,
+    age int,
+    salary int,
+    workexperience int,
+    discount int);
+create or replace procedure task_a() as  $$
+begin
+    update table_3
+    set salary=salary+(workexperience/2)*salary*0.1,
+    discount =10  where workexperience>=2;
+
+    update table_3
+    set discount =discount + (workexperience/5)  where workexperience>=5;
+    commit ;
+end;
+    $$ language 'plpgsql';
+
+--3b
+create or replace procedure task_b() as
+    $$
+        begin
+            update table_3
+            set salary = salary +salary*0.15
+            where age >= 40;
+
+            update table_3 set
+            salary = salary+salary *0.15,
+            discount = 20
+            where age >= 40 and workexperience >= 8;
+            commit ;
+        end;
+    $$
+language plpgsql;
