@@ -1,0 +1,124 @@
+3220. Odd and Even Transactions
+import pandas as pd
+
+def sum_daily_odd_even(transactions: pd.DataFrame) -> pd.DataFrame:
+    transactions['transaction_date'] = pd.to_datetime(transactions['transaction_date'])
+
+    transactions['is_odd'] = transactions['amount'] % 2 == 1
+
+    odd_sum = transactions[transactions['is_odd']].groupby('transaction_date')['amount'].sum()
+    even_sum = transactions[~transactions['is_odd']].groupby('transaction_date')['amount'].sum()
+
+    result = pd.DataFrame({
+        'transaction_date': transactions['transaction_date'].unique(),
+        'odd_sum': odd_sum.reindex(transactions['transaction_date'].unique(), fill_value=0).values,
+        'even_sum': even_sum.reindex(transactions['transaction_date'].unique(), fill_value=0).values
+    })
+
+    result = result.sort_values('transaction_date').reset_index(drop=True)
+
+    return result
+
+2356. Number of Unique Subjects Taught by Each Teacher
+import pandas as pd
+
+def count_unique_subjects(teacher: pd.DataFrame) -> pd.DataFrame:
+    unique_subjects = teacher.drop_duplicates(subset=['teacher_id', 'subject_id'])
+    result = (
+        unique_subjects.groupby('teacher_id')
+        .size()
+        .reset_index(name='cnt')
+    )
+    
+    return result
+1789. Primary Department for Each Employee
+import pandas as pd
+
+def find_primary_department(employee: pd.DataFrame) -> pd.DataFrame:
+    primary = employee[employee['primary_flag'] == 'Y']
+
+    single_dept = (
+        employee.groupby('employee_id')
+        .filter(lambda x: len(x) == 1)
+    )
+
+    result = pd.concat([primary, single_dept])
+    result = result[['employee_id', 'department_id']].drop_duplicates()
+    
+    return result
+1795. Rearrange Products Table
+import pandas as pd
+
+def rearrange_products_table(products: pd.DataFrame) -> pd.DataFrame:
+    melted = pd.melt(
+        products,
+        id_vars=["product_id"],
+        value_vars=["store1", "store2", "store3"],
+        var_name="store",
+        value_name="price"
+    )
+    
+    result = melted.dropna(subset=["price"])
+    
+    return result.reset_index(drop=True)
+1873. Calculate Special Bonus
+
+import pandas as pd
+
+def calculate_special_bonus(employees: pd.DataFrame) -> pd.DataFrame:
+    employees['bonus'] = employees.apply(
+        lambda row: row['salary'] if row['employee_id'] % 2 == 1 and not row['name'].startswith('M') else 0,
+        axis=1
+    )
+    
+    result = employees[['employee_id', 'bonus']].sort_values(by='employee_id')
+    
+    return result
+
+1890. The Latest Login in 2020
+import pandas as pd
+
+def latest_login(logins: pd.DataFrame) -> pd.DataFrame:
+    logins_2020 = logins[
+        (logins['time_stamp'] >= '2020-01-01') & (logins['time_stamp'] < '2021-01-01')
+    ]
+
+    latest_logins = logins_2020.groupby('user_id')['time_stamp'].max().reset_index()
+
+    latest_logins.rename(columns={'time_stamp': 'last_stamp'}, inplace=True)
+    
+    return latest_logins
+1907. Count Salary Categories
+import pandas as pd
+
+def count_salary_categories(accounts: pd.DataFrame) -> pd.DataFrame:
+    bins = [-float('inf'), 20000, 50000, float('inf')]
+    labels = ["Low Salary", "Average Salary", "High Salary"]
+    
+    accounts['category'] = pd.cut(accounts['income'], bins=bins, labels=labels)
+    
+    category_counts = accounts['category'].value_counts(sort=False).reset_index()
+    category_counts.columns = ['category', 'accounts_count']
+    
+    return category_counts
+1934. Confirmation Rate
+import pandas as pd
+
+def confirmation_rate(signups: pd.DataFrame, confirmations: pd.DataFrame) -> pd.DataFrame:
+    merged = pd.merge(signups, confirmations, on="user_id", how="left")
+    
+    aggregation = (
+        merged.groupby("user_id")
+        .agg(
+            total_requests=("action", "count"),
+            confirmed_requests=("action", lambda x: (x == "confirmed").sum())
+        )
+        .reset_index()
+    )
+    
+    aggregation["confirmation_rate"] = (
+        aggregation["confirmed_requests"] / aggregation["total_requests"]
+    ).fillna(0).round(2)
+    
+    result = aggregation[["user_id", "confirmation_rate"]]
+    return result
